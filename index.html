@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewpoint" content="user-scalable=no"/>
+    <title>Pixel drawer</title>
+    <script src="http://cdn.bootcss.com/jquery/1.11.3/jquery.min.js"></script>
+    <script type="text/javascript" src="pixeldrawer.js"></script>
+    <style type="text/css">
+        body {
+            padding:10px;
+        }
+        #main {
+            border : blue solid thin;
+        }
+        #frames, #new{
+            float: left;
+        }
+        .frame{
+            border: blue solid 1px;
+            margin-right : 5px;
+        }
+        .itermgroup{
+            clear: left;
+            margin-bottom: 20px;
+            min-height: 20px;
+        }
+        #export{
+            display : block;
+            width : 680px;
+        }
+    </style>
+    <script>
+        (function() {
+            var lastTime = 0, vendors = ['ms', ';', 'webkit', 'o'];
+            for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+                window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+                window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+            }
+            if (!window.requestAnimationFrame)
+                window.requestAnimationFrame = function(callback, element) {
+                    var currTime = new Date().getTime();
+                    var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+                    var id = window.setTimeout(function() { callback(currTime + timeToCall); }, timeToCall);
+                    lastTime = currTime + timeToCall;
+                    return id;
+                };
+            if (!window.cancelAnimationFrame)
+                window.cancelAnimationFrame = function(id) { clearTimeout(id); };
+        }());
+        function pixelAnimate(){
+            if(drawer._toAnimate)
+            {
+                var current = (new Date()).getTime();
+                if(drawer.lastUpdate && current >= drawer.lastUpdate)
+                    drawer.loop(current - drawer.lastUpdate);
+                drawer.lastUpdate = current;
+                drawer.animation = window.requestAnimationFrame(pixelAnimate, drawer.canvas[0]);
+            }
+        }
+        function startPixelAnimate(){
+            drawer._toAnimate = true;
+            pixelAnimate();
+        }
+        function stopPixelAnimate(){
+            drawer._toAnimate = false;
+        }
+        function isAnimate(){
+            return drawer._toAnimate;
+        }
+        $(function(){
+            window.drawer = new PixelDrawer("main");
+            $("#clear").click(function(){
+                drawer.clear();
+            });
+            $("#save").click(function(){
+                drawer.save();
+                $("#export").val(drawer.export());
+            });
+            $("#restore").click(function(){
+                drawer.restore($("#export").val());
+            });
+
+            $("#new").click(function(){
+                var frm = $("#frames").children().length,
+                    frmName = "Frame" + frm;
+                $("#frames").append('<span class="frame"><label for="' + frmName + '">' + frmName + '</label><input type="radio" id="' + frmName + '" name="frame" value="' + frm + '" checked="true"/></span>');
+                drawer.activate(frm);
+            });
+            $("#frames").click(function(){
+                drawer.activate($("input[name='frame']:checked").val());
+            })
+            $("#edit").click(function(){
+                if(drawer.editable())
+                {
+                    drawer.editable(false);
+                    startPixelAnimate();
+                    $(this).text("Begin drawing");
+                }
+                else
+                {
+                    stopPixelAnimate();
+                    drawer.activate($("input[name='frame']:checked").val());
+                    drawer.editable(true);
+                    $(this).text("End drawing (animation will PLAY after end drawing)");
+                }
+            });
+
+            $("#erase").click(function(){
+                if(drawer.erasable())
+                {
+                    drawer.erasable(false);
+                    $(this).text("Erase");
+                }
+                else
+                {
+                    drawer.erasable(true);
+                    $(this).text("Brush");
+                }
+            });
+        })
+    </script>
+</head>
+
+<body>
+    <h2>Pixel Drawer</h2>
+    <canvas id="main" width="680" height="480">HTML5 support</canvas>
+    <div class="itermgroup">
+        <div id="frames">
+            <span class="frame"><label for="frame0">Back ground</label><input type="radio" id="frame0" name="frame" value="0" checked="true"/></span>
+        </div>
+        <button type="button" id="new" title="Add new frame">+</button>
+    </div>
+    <div class="itermgroup">
+        <button type="button" id="edit">Begin drawing</button>
+        <button type="button" id="erase">Eraser</button>
+        <button type="button" id="clear">Clear</button>
+        <button type="button" id="save">Save</button>
+        <button type="button" id="restore">Restore</button>
+    </div>
+    <div class="itermgroup">
+        Exported json fomart pixel image: 
+        <textarea id="export"></textarea>
+    </div>
+</body>
+</html>
